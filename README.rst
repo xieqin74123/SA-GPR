@@ -15,9 +15,11 @@ The Python packages ase, scipy and sympy are required to run the SA-GPR code.
 Installation
 ============
 
-To install the program, go to the src/ directory and run,
+To install the program, go to the src/ directory and run:
 
-bash install.sh
+::
+
+  $ bash install.sh
 
 This will compile the Fortran code for filling power spectra using f2py.
 
@@ -29,7 +31,7 @@ There are two steps to applying SA-GPR to a physical problem:
 1. Calculation of the similarities (kernels) between molecules/bulk systems.
 2. Minimization of the prediction error and generation of the weights for prediction.
 
-These two steps are applied by running two different Python scripts: sa-gpr-kernels.py computes the kernels (step 1) and sa-gpr-apply.py carried out the regression (step 2).
+These two steps are applied by running two different Python scripts: sa-gpr-kernels.py computes the kernels (step 1) and sa-gpr-apply.py carries out the regression (step 2).
 
 Examples
 ========
@@ -47,10 +49,10 @@ Here, we learn the energy of the water monomer. The energy only has a scalar (L=
 
 ::
 
-  $ cd example/water_monomers
+  $ cd example/water_monomer
   $ sa-gpr-kernels.py -lval 0 -f coords_1000.xyz -sg 0.3 -lc 6 -rc 4.0 -cw 1.0 -cen O
 
-This will create an L=0 kernel file, using the coordinates in coords_1000.in, with Gaussian width 0.3 Angstrom, an angular cutoff of l=6, a radial cutoff of 4 Angstrom, central atom weighting of 1.0, and with centering the environment on oxygen atoms (atomic number 8). The kernel file, :code:`kernel0_1000_sigma0.3_lcut6_cutoff4.0_cweight1.0_n0.txt`, can now be used to perform the regression:
+This will create an L=0 kernel file, using the coordinates in coords_1000.xyz, with Gaussian width 0.3 Angstrom, an angular cutoff of l=6, a radial cutoff of 4 Angstrom, central atom weighting of 1.0, and with centering the environment on oxygen atoms (atomic number 8). The kernel file, :code:`kernel0_1000_sigma0.3_lcut6_cutoff4.0_cweight1.0_n0.txt`, can now be used to perform the regression:
 
 ::
 
@@ -69,7 +71,7 @@ Here, we learn the hyperpolarizabilities of the Zundel cation. Because the calcu
 
 ::
 
-  $ mkblocks.sh coords_1000.xyz 100
+  $ python ../src/scripts/make_blocks.py coords_1000.xyz 100
 
 This will create 55 `Block` folders, each of which contains a subset of the coordinates. In each of these folders, run the commands:
 
@@ -109,13 +111,13 @@ Instead of learning the L=1 and L=3 components of the hyperpolarizability at the
 
 ::
 
-  $ cartesian_to_spherical.py -f coords_1000.xyz -p "beta" -r 3 -o "processed_coords_1000.xyz"
+  $ cartesian-to-spherical.py -f coords_1000.xyz -p "beta" -r 3 -o "processed_coords_1000.xyz"
 
 This will add two properties, :code:`beta_L1` and :code:`beta_L3` to the file :code:`coords_1000.xyz`, and store the result in :code:`processed_coords_1000.xyz` (if no file is given, the input file is overwritten); these are respectively the L=1 and L=3 (real) spherical components. To perform regression on the L=1 component, run the command:
 
 ::
 
-  $ regression.py -k kernel1_1000_sigma0.3_lcut6_cutoff4.0_cweight1.0.txt -t processed_coords_1000.xyz -p "beta_L1" -rdm 200 -nc 5 -ftr 1.0 -lm 1e-6 -o outputL1.out
+  $ regression.py -k kernel1_1000_sigma0.3_lcut6_cutoff4.0_cweight1.0.txt -f processed_coords_1000.xyz -p "beta_L1" -rdm 200 -nc 5 -ftr 1.0 -lm 1e-6 -o outputL1.out
 
 To perform regression on the L=3 component, run the command:
 
@@ -142,7 +144,7 @@ The dielectric response of the system is represented by a rank-2 tensor which ca
 
 ::
 
-  $ mkblocks.sh coords_1000.xyz 10
+  $ python ../../src/scripts/make_blocks.py coords_1000.xyz 10
 
 Then, in each of the `Block` folders generated, run the following commands:
 
@@ -157,7 +159,7 @@ Finally, the kernel is reconstructed and regression is carried out as earlier:
 
   $ rebuild_kernel.py -l 0 -ns 1000 -nb 100 -rc 4.0 -lc 6 -sg 0.3 -cw 1.0
   $ rebuild_kernel.py -l 2 -ns 1000 -nb 100 -rc 4.0 -lc 6 -sg 0.3 -cw 1.0
-  $ sa-gpr-apply.py -r 2 -k kernel0_1000_sigma0.3_lcut6_cutoff4.0_cweight1.0_n0.txt kernel2_1000_sigma0.3_lcut6_cutoff4.0_cweight1.0_n0.txt -rdm 200 -ftr 1.0 -f coords_1000.xyz "epsilon" -lm 1e-4 1e-4
+  $ sa-gpr-apply.py -r 2 -k kernel0_1000_sigma0.3_lcut6_cutoff4.0_cweight1.0_n0.txt kernel2_1000_sigma0.3_lcut6_cutoff4.0_cweight1.0_n0.txt -rdm 200 -ftr 1.0 -f coords_1000.xyz -p "epsilon" -lm 1e-4 1e-4
 
 Contact
 =======

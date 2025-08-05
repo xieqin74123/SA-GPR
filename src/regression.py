@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 from __future__ import print_function
 from builtins import range
 import argparse
@@ -24,7 +24,6 @@ parser.add_argument("-sel", "--select",   type=int,   default=[0,100],      narg
 parser.add_argument("-rdm", "--random",   type=int,   default=0,                       help="Number of random training points")
 parser.add_argument("-nc",  "--ncycles",  type=int,   default=1,                       help="Number of cycles for regression with random selection")
 parser.add_argument("-o",   "--ofile",    type=str,   default='output.out',            help="Output file for weights")
-parser.add_argument("-lm",  "--lmda",     type=float, required=True,
 args = parser.parse_args()
 
 # Parse command-line arguments
@@ -52,7 +51,7 @@ else:
 all_data = np.array([i.split(' ') for i in tens]).astype(float)
 
 print
-print("Doing regression with L={l}".format(l=lval))
+print("Doing regression with L={}".format(lval))
 print
 
 kernel_flatten = np.loadtxt(args.kernel,dtype=float)
@@ -115,9 +114,9 @@ for nc in range(ncycles):
 
     # Print out weights; each cycle will have its own output file with (1) members of the training set, (2) weights, (3) errors
     if (ofile != ''):
-        print("Printing out cycle {} with intrinsic deviation {} and absolute error {}" % (
+        print("Printing out cycle {} with intrinsic deviation {} and absolute error {}".format(
             nc, indev, abserr))
-        print("Intrinsic error = {}" % float(100*np.sqrt(abserr**2/indev**2)))
+        print("Intrinsic error = {}".format(float(100*np.sqrt(abserr**2/indev**2))))
         with open(ofile + "." + str(nc), "w")as f:
             f.write("Regression for L = {}".format(lval))
             f.write("Tensor file:")

@@ -311,11 +311,11 @@ def get_CS_matrix(rank,mask1,mask2):
 ##                  row_labels.append(np.array(lbl))
 ##              # The column labels are trickier; these are based on l and m values.
 ##
-##              print "here"
+##              print("here")
 ##      CS = cmatr[-1]
 ##      if (rank>1):
 ##          # Take care of degeneracies.
-##          print "here"
+##          print("here")
 ##
 ##  for i in range(1):
 ##      CS[i] = CS[i] * mask1[i]

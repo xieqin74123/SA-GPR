@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 from __future__ import print_function
 from builtins import range
@@ -86,7 +86,7 @@ if extrap == False:
             #for i in range(natspe[ispe]*npoints):
             #    for j in range(natspe[ispe]*npoints):
             #        for iim,jjm in product(range(2*lval+1),range(2*lval+1)):
-            #            print >> envfile[ispe], katomic[ispe][i,j,iim,jjm]
+#            envfile[ispe].write(str(katomic[ispe][i,j,iim,jjm]) + "\n")
 
     else:
         for n in range(len(nlist)):
@@ -101,7 +101,7 @@ if extrap == False:
             #for i in range(npoints):
             #    for j in range(npoints):
             #        for iim,jjm in product(range(2*lval+1),range(2*lval+1)):
-            #            print >> kernfile, kernel[i,j,iim,jjm]
+#            kernfile.write(str(kernel[i,j,iim,jjm]) + "\n")
             #kernfile.close()
 
 else:
@@ -174,7 +174,7 @@ else:
     #        for i in range(natspe[ispe]*npoints):
     #            for j in range(natspe[ispe]*npoints):
     #                for iim,jjm in product(range(2*lval+1),range(2*lval+1)):
-    #                    print >> envfile[ispe], katomic[ispe][i,j,iim,jjm]
+#                    envfile[ispe].write(str(katomic[ispe][i,j,iim,jjm]) + "\n")
 
     else:
         for n in range(len(nlist)):
@@ -184,10 +184,10 @@ else:
                 kernel[i,j] = np.real(np.dot(np.dot(CC,kernels[1+n][i,j]),CT))
             # Save kernel.
             kernel_file = "kernel{lv}_ntest{nt}_ntrain{ntr}_sigma{sg}_lcut{lc}_cutoff{rcut}_cweight{cw}.npy".format(lv=lval, nt=ntest, ntr =(npoints-ntest),  sg = sg,lc = lc, rcut = rcut, cw = cweight)
-            np.save(kernel_file,kerne)
+            np.save(kernel_file,kernel)
             #kernfile = open(kernel_file,"w")
             #for i in range(npoints):
             #    for j in range(npoints):
             #        for iim,jjm in product(range(2*lval+1),range(2*lval+1)):
-            #            print >> kernfile, kernel[i,j,iim,jjm]
+#            kernfile.write(str(kernel[i,j,iim,jjm]) + "\n")
             #kernfile.close()

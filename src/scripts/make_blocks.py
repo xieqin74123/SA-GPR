@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 from ase.io import read,write
 import argparse
@@ -18,12 +18,12 @@ nconfigs = len(all_coords)
 blocksize = int(math.ceil(float(nconfigs)/float(nblock)))
 nblock = int(math.ceil(float(nconfigs)/float(blocksize)))
 
-print "Read in file with %i frames."%(nconfigs)
-print "Creating %i blocks."%(nblock)
-print "Each block will contain (up to) %i frames."%(blocksize)
+print("Read in file with %i frames." % (nconfigs))
+print("Creating %i blocks." % (nblock))
+print("Each block will contain (up to) %i frames." % (blocksize))
 
-for i in xrange(nblock):
-    for j in xrange(i+1):
+for i in range(nblock):
+    for j in range(i+1):
         dirname = 'Block_' + str(i) + '_' + str(j)
         if not os.path.exists(dirname):
             os.mkdir(dirname)
@@ -31,5 +31,5 @@ for i in xrange(nblock):
         imax = min(i*blocksize + blocksize,nconfigs)
         jmin = j*blocksize
         jmax = min(j*blocksize + blocksize,nconfigs)
-        coords_out = [all_coords[ij] for ij in range(imin,imax)+range(jmin,jmax)]
+        coords_out = [all_coords[ij] for ij in list(range(imin,imax)) + list(range(jmin,jmax))]
         write(dirname + '/coords.xyz',coords_out,format='extxyz')

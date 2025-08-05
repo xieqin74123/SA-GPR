@@ -22,7 +22,7 @@ outfile = args.output
 if outfile == '':
     outfile = file_to_convert
 
-print("Converting rank-{rank} property {property} in file {file}".format(rank=rank, file=file_to_convert, property=property_to_convert))
+print("Converting rank-{} property {} in file {}".format(rank, property_to_convert, file_to_convert))
 
 # Read in tensor file
 ftrs = read(file_to_convert,':')
@@ -120,7 +120,7 @@ for i in range(len(vout)):
     else:
         vout_real.append(np.concatenate(np.array([np.real(np.dot(CR[i], vout[i][j])) for j in range(ndata)], dtype=float)).astype(float))
 
-# Print out these components to files
+    # Print out these components to files
 for i in range(len(lvals)):
     prop_out = property_to_convert + "_L" + str(lvals[i])
     print("Outputting property {} to {}.".format(prop_out, outfile))
