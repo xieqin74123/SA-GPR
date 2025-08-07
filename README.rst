@@ -71,7 +71,7 @@ Here, we learn the hyperpolarizabilities of the Zundel cation. Because the calcu
 
 ::
 
-  $ python ../src/scripts/make_blocks.py coords_1000.xyz 100
+  $ python ../src/scripts/make_blocks.py -f coords_1000.xyz -n 10
 
 This will create 55 `Block` folders, each of which contains a subset of the coordinates. In each of these folders, run the commands:
 

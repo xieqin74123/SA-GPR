@@ -81,19 +81,25 @@ def do_sagpr(lvals,lm,fractrain,tens,kernel_flatten,sel,rdm,rank,ncycles,nat,per
         testcart = np.real(np.concatenate(vtest)).astype(float)
 
         if peratom:
-            corrfile = "prediction.txt"
+            corrfile = "prediction.csv"
             with open(corrfile, 'w') as f:
+                f.write("sample_id,true_value,predicted_value,num_atoms\n")  # CSV header
                 for i in range(ns):
-                    entry_a = ' '.join(str(e) for e in list(np.split(testcart,ns)[i]*nattest[i]))
-                    entry_b = ' '.join(str(e) for e in list(np.split(predcart,ns)[i]*nattest[i]))
-                    f.write(' {} {} {}'.format(entry_a,entry_b,str(nattest[i])))
+                    true_val = np.split(testcart,ns)[i]*nattest[i]
+                    pred_val = np.split(predcart,ns)[i]*nattest[i]
+                    # For tensor components, write each component as a separate row
+                    for j in range(len(true_val)):
+                        f.write("{},{},{},{}\n".format(i, true_val[j], pred_val[j], nattest[i]))
         else:
-            corrfile = "prediction.txt"
+            corrfile = "prediction.csv"
             with open(corrfile, 'w') as f:
+                f.write("sample_id,true_value,predicted_value\n")  # CSV header
                 for i in range(ns):
-                    entry_a = ' '.join(str(e) for e in list(np.split(testcart,ns)[i]))
-                    entry_b = ' '.join(str(e) for e in list(np.split(predcart,ns)[i]))
-                    f.write('{} {}'.format(entry_a,entry_b))
+                    true_val = np.split(testcart,ns)[i]
+                    pred_val = np.split(predcart,ns)[i]
+                    # For tensor components, write each component as a separate row
+                    for j in range(len(true_val)):
+                        f.write("{},{},{}\n".format(i, true_val[j], pred_val[j]))
 
 
 
