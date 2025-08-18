@@ -10,7 +10,38 @@ import numpy as np
 
 ###############################################################################################################################
 
-def do_sagpr(lvals,lm,fractrain,tens,kernel_flatten,sel,rdm,rank,ncycles,nat,peratom):
+def do_sagpr(lvals, lm, fractrain, tens, kernel_flatten, sel, rdm, rank, ncycles, nat, peratom):
+    """
+    Perform the core SA-GPR (Symmetry-Adapted Gaussian Process Regression) calculation.
+    
+    This function implements the main regression algorithm, including data partitioning,
+    kernel matrix operations, training, prediction, and error analysis.
+    
+    Parameters:
+    -----------
+    lvals : list
+        List of angular momentum quantum numbers (L values)
+    lm : list
+        List of regularization parameters for each L value
+    fractrain : float
+        Fraction of data used for training
+    tens : list
+        Tensor property values
+    kernel_flatten : list
+        List of flattened kernel matrices
+    sel : list
+        Selection indices for training set
+    rdm : int
+        Number of random training points
+    rank : int
+        Rank of tensor being learned
+    ncycles : int
+        Number of regression cycles
+    nat : list
+        Number of atoms per configuration
+    peratom : bool
+        Whether to use per-atom scaling
+    """
 
     # initialize regression
     degen = [(2*l+1) for l in lvals]
@@ -122,20 +153,109 @@ def do_sagpr(lvals,lm,fractrain,tens,kernel_flatten,sel,rdm,rank,ncycles,nat,per
 
 ###############################################################################################################################
 
-# This is a wrapper that calls python scripts to do SA-GPR with pre-built L-SOAP kernels.
+def sapgr_apply(lvals=None, lm=None, fractrain=1.0, tens=None, kernels=None, 
+                sel=None, rdm=0, rank=None, ncycles=1, nat=None, peratom=False):
+    """
+    Apply Symmetry-Adapted Gaussian Process Regression (SA-GPR) for learning tensorial properties.
+    
+    This function performs machine learning on pre-computed kernels to predict tensorial properties
+    of molecular systems. It supports different tensor ranks and can handle both per-atom and 
+    total property predictions.
+    
+    Parameters:
+    -----------
+    lvals : list, optional
+        List of angular momentum quantum numbers (L values) corresponding to spherical tensor components.
+        If None, will be computed based on rank parameter.
+        For even rank: [0, 2, 4, ..., rank]
+        For odd rank: [1, 3, 5, ..., rank]
+    lm : list
+        List of regularization parameters (lambda values) for Kernel Ridge Regression.
+        Must have the same length as lvals. Required parameter.
+    fractrain : float, default=1.0
+        Fraction of data points used for training (remaining fraction used for testing).
+        Value between 0 and 1.
+    tens : list
+        List of tensor property values for each configuration. Required parameter.
+        Format depends on tensor rank and peratom setting.
+    kernels : list
+        List of file paths containing pre-computed kernel matrices. Required parameter.
+        Should correspond to the L values in lvals.
+    sel : list, optional
+        Selection range for training set as [start, end] indices. 
+        If None or empty, uses random or fraction-based selection.
+    rdm : int, default=0
+        Number of random training points to select. If 0, uses fractrain instead.
+    rank : int
+        Rank of the tensor to be learned (0=scalar, 1=vector, 2=matrix, etc.).
+        Required parameter.
+    ncycles : int, default=1
+        Number of regression cycles with different random training/test splits.
+        Results are averaged over all cycles.
+    nat : list
+        List of number of atoms in each configuration. Required for peratom scaling.
+    peratom : bool, default=False
+        If True, scale properties by number of atoms in each configuration.
+    
+    Returns:
+    --------
+    None
+        Function performs regression and prints results. Saves predictions to 'prediction.csv'.
+    
+    Raises:
+    -------
+    ValueError
+        If required parameters (lm, tens, kernels, rank) are not provided.
+    """
+    
+    # Validate required parameters
+    if lm is None:
+        raise ValueError("lm (regularization parameters) is required")
+    if tens is None:
+        raise ValueError("tens (tensor properties) is required")
+    if kernels is None:
+        raise ValueError("kernels (kernel file paths) is required")
+    if rank is None:
+        raise ValueError("rank (tensor rank) is required")
+    
+    # Set default values based on parsing.py defaults
+    if sel is None:
+        sel = []
+    if nat is None:
+        nat = []
+    
+    # Compute lvals if not provided, based on tensor rank
+    if lvals is None:
+        if rank % 2 == 0:
+            # Even rank: include L=0, 2, 4, ..., rank
+            lvals = [l for l in range(0, rank + 1, 2)]
+        else:
+            # Odd rank: include L=1, 3, 5, ..., rank
+            lvals = [l for l in range(1, rank + 1, 2)]
+    
+    # Validate that lm and lvals have matching lengths
+    if len(lm) != len(lvals):
+        raise ValueError("Number of regularization parameters must equal number of L values!")
+    
+    # Read-in kernel matrices from files
+    print("Loading kernel matrices...")
 
-# Parse input arguments
-args = utils.parsing.add_command_line_arguments_learn("SA-GPR")
-[lvals,lm,fractrain,tens,kernels,sel,rdm,rank,ncycles,nat,peratom] = utils.parsing.set_variable_values_learn(args)
+    kernel = []
+    for k in range(len(kernels)):
+        # Load kernel matrix and flatten it for processing
+        kr = np.load(kernels[k])
+        kr = np.reshape(kr, np.size(kr))
+        kernel.append(kr)
 
-# Read-in kernels
-print("Loading kernel matrices...")
+    print("...Kernels loaded.")
+    
+    # Perform the actual SA-GPR calculation
+    do_sagpr(lvals, lm, fractrain, tens, kernel, sel, rdm, rank, ncycles, nat, peratom)
 
-kernel = []
-for k in range(len(kernels)):
-    kr = np.load(kernels[k])
-    kr = np.reshape(kr,np.size(kr))
-    kernel.append(kr)
+if __name__ == "__main__":
+    # This is a wrapper that calls python scripts to do SA-GPR with pre-built L-SOAP kernels.
 
-print("...Kernels loaded.")
-do_sagpr(lvals,lm,fractrain,tens,kernel,sel,rdm,rank,ncycles,nat,peratom)
+    # Parse input arguments
+    args = utils.parsing.add_command_line_arguments_learn("SA-GPR")
+    [lvals,lm,fractrain,tens,kernels,sel,rdm,rank,ncycles,nat,peratom] = utils.parsing.set_variable_values_learn(args)
+    sapgr_apply(lvals,lm,fractrain,tens,kernels,sel,rdm,rank,ncycles,nat,peratom)

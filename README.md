@@ -39,8 +39,8 @@ SA-GPR follows a two-step process for machine learning tensorial properties:
 
 These steps are performed using two main scripts:
 
-- `sa-gpr-kernels.py`: Computes the kernels (step 1)
-- `sa-gpr-apply.py`: Performs the regression (step 2)
+- `sa_gpr_kernels.py`: Computes the kernels (step 1)
+- `sa_gpr_apply.py`: Performs the regression (step 2)
 
 ## Examples
 
@@ -65,7 +65,7 @@ Learn the energy of water monomers (scalar L=0 component, equivalent to standard
 
 ```bash
 cd example/water_monomer
-sa-gpr-kernels.py -lval 0 -f coords_1000.xyz -sg 0.3 -lc 6 -rc 4.0 -cw 1.0 -cen O
+sa_gpr_kernels.py -lval 0 -f coords_1000.xyz -sg 0.3 -lc 6 -rc 4.0 -cw 1.0 -cen O
 ```
 
 This creates an L=0 kernel file with:
@@ -78,7 +78,7 @@ This creates an L=0 kernel file with:
 Perform regression:
 
 ```bash
-sa-gpr-apply.py -r 0 -k kernel0_1000_sigma0.3_lcut6_cutoff4.0_cweight1.0_n0.txt -rdm 200 -ftr 1.0 -f coords_1000.xyz -p "potential" -lm 1e-8
+sa_gpr_apply.py -r 0 -k kernel0_1000_sigma0.3_lcut6_cutoff4.0_cweight1.0_n0.txt -rdm 200 -ftr 1.0 -f coords_1000.xyz -p "potential" -lm 1e-8
 ```
 
 **Note:** For gas-phase clusters, cell vectors should give zero cell volume.
@@ -97,8 +97,8 @@ python ../src/scripts/make_blocks.py -f coords_1000.xyz -n 10
 In each generated Block folder, run:
 
 ```bash
-sa-gpr-kernels.py -lval 1 -f coords.xyz -sg 0.3 -lc 6 -rc 4.0 -cw 1.0 -cen O
-sa-gpr-kernels.py -lval 3 -f coords.xyz -sg 0.3 -lc 6 -rc 4.0 -cw 1.0 -cen O
+sa_gpr_kernels.py -lval 1 -f coords.xyz -sg 0.3 -lc 6 -rc 4.0 -cw 1.0 -cen O
+sa_gpr_kernels.py -lval 3 -f coords.xyz -sg 0.3 -lc 6 -rc 4.0 -cw 1.0 -cen O
 ```
 
 Reconstruct the full kernel:
@@ -111,7 +111,7 @@ rebuild_kernel.py -l 3 -ns 1000 -nb 10 -rc 4.0 -lc 6 -sg 0.3 -cw 1.0
 Perform regression:
 
 ```bash
-sa-gpr-apply.py -r 3 -k kernel1_1000_sigma0.3_lcut6_cutoff4.0_cweight1.0.txt kernel3_1000_sigma0.3_lcut6_cutoff4.0_cweight1.0.txt -rdm 200 -ftr 1.0 -f coords_1000.xyz -p "beta" -lm 1e-6 1e-3
+sa_gpr_apply.py -r 3 -k kernel1_1000_sigma0.3_lcut6_cutoff4.0_cweight1.0.txt kernel3_1000_sigma0.3_lcut6_cutoff4.0_cweight1.0.txt -rdm 200 -ftr 1.0 -f coords_1000.xyz -p "beta" -lm 1e-6 1e-3
 ```
 
 #### Learning Dipole Moment
@@ -119,7 +119,7 @@ sa-gpr-apply.py -r 3 -k kernel1_1000_sigma0.3_lcut6_cutoff4.0_cweight1.0.txt ker
 The dipole moment (L=1 tensor) can be learned using the existing L=1 kernel:
 
 ```bash
-sa-gpr-apply.py -r 1 -k kernel1_1000_sigma0.3_lcut6_cutoff4.0_cweight1.0.txt -rdm 200 -ftr 1.0 -f coords_1000.xyz -p "mu" -lm 1e-3
+sa_gpr_apply.py -r 1 -k kernel1_1000_sigma0.3_lcut6_cutoff4.0_cweight1.0.txt -rdm 200 -ftr 1.0 -f coords_1000.xyz -p "mu" -lm 1e-3
 ```
 
 #### Learning Components Separately
@@ -127,7 +127,7 @@ sa-gpr-apply.py -r 1 -k kernel1_1000_sigma0.3_lcut6_cutoff4.0_cweight1.0.txt -rd
 Split tensors into spherical components:
 
 ```bash
-cartesian-to-spherical.py -f coords_1000.xyz -p "beta" -r 3 -o "processed_coords_1000.xyz"
+cartesian_to_spherical.py -f coords_1000.xyz -p "beta" -r 3 -o "processed_coords_1000.xyz"
 ```
 
 Perform separate regressions:
@@ -152,8 +152,8 @@ python ../../src/scripts/make_blocks.py coords_1000.xyz 10
 In each Block folder:
 
 ```bash
-sa-gpr-kernels.py -lval 0 -f coords.xyz -sg 0.3 -lc 6 -rc 4.0 -cw 1.0 -cen O
-sa-gpr-kernels.py -lval 2 -f coords.xyz -sg 0.3 -lc 6 -rc 4.0 -cw 1.0 -cen O
+sa_gpr_kernels.py -lval 0 -f coords.xyz -sg 0.3 -lc 6 -rc 4.0 -cw 1.0 -cen O
+sa_gpr_kernels.py -lval 2 -f coords.xyz -sg 0.3 -lc 6 -rc 4.0 -cw 1.0 -cen O
 ```
 
 Reconstruct and perform regression:
@@ -161,7 +161,7 @@ Reconstruct and perform regression:
 ```bash
 rebuild_kernel.py -l 0 -ns 1000 -nb 100 -rc 4.0 -lc 6 -sg 0.3 -cw 1.0
 rebuild_kernel.py -l 2 -ns 1000 -nb 100 -rc 4.0 -lc 6 -sg 0.3 -cw 1.0
-sa-gpr-apply.py -r 2 -k kernel0_1000_sigma0.3_lcut6_cutoff4.0_cweight1.0_n0.txt kernel2_1000_sigma0.3_lcut6_cutoff4.0_cweight1.0_n0.txt -rdm 200 -ftr 1.0 -f coords_1000.xyz -p "epsilon" -lm 1e-4 1e-4
+sa_gpr_apply.py -r 2 -k kernel0_1000_sigma0.3_lcut6_cutoff4.0_cweight1.0_n0.txt kernel2_1000_sigma0.3_lcut6_cutoff4.0_cweight1.0_n0.txt -rdm 200 -ftr 1.0 -f coords_1000.xyz -p "epsilon" -lm 1e-4 1e-4
 ```
 
 ## Technical Implementation
@@ -188,10 +188,10 @@ These functions use optimized NumPy operations and maintain mathematical precisi
 ```
 SA-GPR/
 ├── src/
-│   ├── sa-gpr-kernels.py         # Kernel calculation
-│   ├── sa-gpr-apply.py           # Regression application
+│   ├── sa_gpr_kernels.py         # Kernel calculation
+│   ├── sa_gpr_apply.py           # Regression application
 │   ├── regression.py             # Direct regression tool
-│   ├── cartesian-to-spherical.py # Tensor conversion
+│   ├── cartesian_to_spherical.py # Tensor conversion
 │   ├── scripts/                  # Utility scripts
 │   └── utils/                    # Core utilities
 │       ├── power_spectra.py      # Python implementation of core functions
