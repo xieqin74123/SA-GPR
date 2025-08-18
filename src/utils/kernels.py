@@ -10,10 +10,8 @@ from scipy import special
 import utils.read_xyz
 from itertools import product
 import time
-import utils.pow_spec as pow_spec
-import utils.com_spe as com_spe
-# import pow_spec
-# import com_spe
+
+from utils.power_spectra import com_spe, pow_spec
 
 ##########################################################################################################
 
