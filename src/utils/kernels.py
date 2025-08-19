@@ -11,11 +11,58 @@ import utils.read_xyz
 from itertools import product
 import time
 
-from utils.power_spectra import com_spe, pow_spec
+from utils.power_spectra import combine_spectra, fill_spectra
 
 ##########################################################################################################
 
 def build_SOAP0_kernels(npoints,lcut,natmax,nspecies,nat,nneigh,length,theta,phi,efact,nnmax,vrb,nlist):
+    """
+    Compute the L=0 SOAP (Smooth Overlap of Atomic Positions) kernel between atomic structures.
+    This function calculates the SOAP kernel as described in Eqns. (33-34) of Ref. Phys. Rev. B 87, 184115 (2013).
+    It computes the similarity between atomic environments using spherical harmonics and modified spherical Bessel functions,
+    and returns both local and global kernels, as well as kernels raised to powers specified in `nlist`.
+    Parameters
+    ----------
+    npoints : int
+        Number of atomic structures (configurations) to compare.
+    lcut : int
+        Maximum angular momentum quantum number (l) for the spherical harmonics expansion.
+    natmax : int
+        Maximum number of atoms per structure.
+    nspecies : int
+        Number of atomic species present in the dataset.
+    nat : array_like, shape (npoints,)
+        Number of atoms in each structure.
+    nneigh : array_like, shape (npoints, natmax, nspecies)
+        Number of neighbors for each atom and species in each structure.
+    length : array_like, shape (npoints, natmax, nspecies, nnmax)
+        Distances from each atom to its neighbors.
+    theta : array_like, shape (npoints, natmax, nspecies, nnmax)
+        Polar angles (theta) of neighbor positions.
+    phi : array_like, shape (npoints, natmax, nspecies, nnmax)
+        Azimuthal angles (phi) of neighbor positions.
+    efact : array_like, shape (npoints, natmax, nspecies, nnmax)
+        Weighting factors for each neighbor (e.g., atomic weights or cutoff functions).
+    nnmax : int
+        Maximum number of neighbors per atom/species.
+    vrb : int
+        Verbosity level (unused in this function, but may be used for debugging or logging).
+    nlist : list of int
+        List of exponents for which to compute the kernel raised to the nth power.
+    Returns
+    -------
+    kernels : list
+        A list containing:
+            - kloc: Local environment kernels, shape (npoints, npoints, natmax, natmax)
+            - kernel: Global structure kernels, shape (npoints, npoints)
+            - kerneln: Additional kernels for each n in nlist, each of shape (npoints, npoints)
+    Notes
+    -----
+    - The function assumes all input arrays are properly initialized and sized.
+    - The kernel is normalized by the self-similarity of local environments.
+    - The function supports computation of higher-order kernels via exponentiation.
+    - The implementation is based on the formalism in Phys. Rev. B 87, 184115 (2013).
+    """
     """Compute the L=0 SOAP kernel according to Eqns.(33-34) of Ref. Phys. Rev. B 87, 184115 (2013)"""
 
     mcut = 2*lcut+1
@@ -55,7 +102,7 @@ def build_SOAP0_kernels(npoints,lcut,natmax,nspecies,nat,nneigh,length,theta,phi
                                          sph_i6[i,ii,ix,0:nneigh[i,ii,ix],:,:], sph_j6[j,jj,ix,0:nneigh[j,jj,ix],:,:]   )
 
                     # Compute the dot product of power spectra contracted over l,m,k and summing over all pairs of atomic species a,b
-                    skernel[i,j,ii,jj] = np.real(com_spe.combine_spectra(lcut,mcut,nspecies,ISOAP,divfac))
+                    skernel[i,j,ii,jj] = np.real(combine_spectra(lcut,mcut,nspecies,ISOAP,divfac))
 
     # Compute global kernel between structures, averaging over all the (normalized) kernels of local environments
     kernel = np.zeros((npoints,npoints),dtype=float)
@@ -157,7 +204,7 @@ def build_SOAP_kernels(lval,npoints,lcut,natmax,nspecies,nat,nneigh,length,theta
                                 sph_i6[i,ii,ix,0:nneigh[i,ii,ix],:,:], sph_j6[j,jj,ix,0:nneigh[j,jj,ix],:,:], optimize=einpath )
 
             # Make use of a Fortran 90 subroutine to combine the power spectra and the CG coefficients
-            skernel[i,j,ii,jj,:,:] = pow_spec.fill_spectra(lval,lcut,mcut,nspecies,ISOAP,CG2)
+            skernel[i,j,ii,jj,:,:] = fill_spectra(lval,lcut,mcut,nspecies,ISOAP,CG2)
 
             # Exploit Hermiticity
             if not j == i :

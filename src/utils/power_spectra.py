@@ -107,23 +107,3 @@ def fill_spectra(lval, lcut, mcut, nspecies, ISOAP, CG2):
                                                    dcix)
     
     return PS
-
-
-# Compatibility layer for the old module names
-class CombineSpectraModule:
-    """Compatibility class to mimic the f2py compiled module interface"""
-    @staticmethod
-    def combine_spectra(lcut, mcut, nspecies, ISOAP, divfac):
-        return combine_spectra(lcut, mcut, nspecies, ISOAP, divfac)
-
-
-class FillSpectraModule:
-    """Compatibility class to mimic the f2py compiled module interface"""
-    @staticmethod
-    def fill_spectra(lval, lcut, mcut, nspecies, ISOAP, CG2):
-        return fill_spectra(lval, lcut, mcut, nspecies, ISOAP, CG2)
-
-
-# Create module-like objects for backward compatibility
-com_spe = CombineSpectraModule()
-pow_spec = FillSpectraModule()
