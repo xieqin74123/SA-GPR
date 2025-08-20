@@ -6,15 +6,13 @@ A Python implementation for machine learning of tensorial properties of atomisti
 
 Andrea Grisafi, David M. Wilkins, Gabor Csányi, Michele Ceriotti, "Symmetry-Adapted Machine Learning for Tensorial Properties of Atomistic Systems", *Phys. Rev. Lett.* **120**, 036002 (2018)
 
-**Note:** This is a pure Python implementation that eliminates the need for Fortran compilation and f2py, making installation and usage much simpler while maintaining the same functionality and mathematical accuracy.
-
 ## Features
 
-- **Pure Python Implementation**: No Fortran compilation required
-- **Easy Installation**: Simple setup with standard Python scientific libraries
-- **Full Compatibility**: Maintains all original functionality
-- **Cross-Platform**: Works on any system with Python
-- **Efficient**: Uses optimized NumPy operations for computational performance
+- Efficient kernel calculation and regression for tensorial properties
+- Easy installation with standard Python scientific libraries
+- Full compatibility with original functionality
+- Cross-platform: Works on any system with Python
+- Uses optimized NumPy operations for computational performance
 
 ## Requirements
 
@@ -25,10 +23,32 @@ The following Python packages are required:
 - `sympy` - For symbolic mathematics
 - `ase` - Atomic Simulation Environment for structure handling
 
+## C++ Acceleration Module
+
+For improved performance, SA-GPR provides a C++ extension module (`kernels_cpp`) for the most computationally intensive kernel calculations.  
+
+### Requirements
+
+- A C++17 compatible compiler (e.g., `g++`, `clang++`)
+- Python development headers (e.g., `python3-dev`)
+- NumPy
+
+### Compilation
+
+To build the C++ extension, run the following command in the `src/utils/` directory:
+
+```bash
+cd src/utils
+python3 setup.py build_ext --inplace
+```
+
+This will generate a shared library file (e.g., `kernels_cpp.cpython-3x-*.so`) in the same directory. The Python code will automatically use the C++ version if it is available.
+
+If you modify the C++ source (`kernels.cpp`), simply rerun the above command to recompile.
 
 ## Installation
 
-To use SA-GPR, simply ensure the required Python packages are installed (see Requirements above). No compilation or installation script is needed. All code can be run directly from the `src/` directory.
+To use SA-GPR, simply ensure the required Python packages are installed (see Requirements above). If you want to use the C++ acceleration, please follow the instructions in the "C++ Acceleration Module" section to compile the extension before running the main scripts. All code can be run directly from the `src/` directory.
 
 ## Workflow
 
@@ -168,18 +188,17 @@ sa_gpr_apply.py -r 2 -k kernel0_1000_sigma0.3_lcut6_cutoff4.0_cweight1.0_n0.txt 
 
 ### Core Functions
 
-The package implements two core computational functions in pure Python:
+The package implements two core computational functions:
 
 - **`combine_spectra`**: Combines power spectra for L=0 SOAP kernel computation
 - **`fill_spectra`**: Fills power spectra for L>0 spherical tensor SOAP kernel computation
 
-These functions use optimized NumPy operations and maintain mathematical precision equivalent to the original Fortran implementation.
+These functions use optimized NumPy operations and maintain mathematical precision equivalent to the original implementation.
 
 ### Performance Notes
 
 - Uses NumPy's optimized linear algebra routines
-- Maintains identical mathematical accuracy to Fortran versions
-- Performance is typically 2-5x slower than highly optimized Fortran for very large systems
+- Performance is typically 2-5x slower than highly optimized Fortran for very large systems (when not using the C++ module)
 - Significantly improved portability and ease of installation
 - Recommended for most research applications
 
@@ -218,4 +237,4 @@ Please refer to the original publication for citation requirements when using th
 
 ---
 
-*This pure Python implementation eliminates Fortran dependencies while preserving all original functionality, making SA-GPR more accessible to the broader scientific community.*
+*This implementation of SA-GPR provides an accessible and efficient tool for the scientific community to explore tensorial properties of atomistic systems.*

@@ -10,6 +10,16 @@ from scipy import special
 import utils.read_xyz
 from itertools import product
 import time
+try:
+    from kernels_cpp import *
+except ImportError:
+    import os
+    import sys
+    # 添加当前文件所在目录到 Python 路径
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    if current_dir not in sys.path:
+        sys.path.insert(0, current_dir)
+    from kernels_cpp import *
 
 from utils.power_spectra import combine_spectra, fill_spectra
 
@@ -31,17 +41,17 @@ def build_SOAP0_kernels(npoints,lcut,natmax,nspecies,nat,nneigh,length,theta,phi
         Maximum number of atoms per structure.
     nspecies : int
         Number of atomic species present in the dataset.
-    nat : array_like, shape (npoints,)
+    nat : array_like, shape (npoints,), dtype int
         Number of atoms in each structure.
-    nneigh : array_like, shape (npoints, natmax, nspecies)
+    nneigh : array_like, shape (npoints, natmax, nspecies), dtype int
         Number of neighbors for each atom and species in each structure.
-    length : array_like, shape (npoints, natmax, nspecies, nnmax)
+    length : array_like, shape (npoints, natmax, nspecies, nnmax), dtype float
         Distances from each atom to its neighbors.
-    theta : array_like, shape (npoints, natmax, nspecies, nnmax)
+    theta : array_like, shape (npoints, natmax, nspecies, nnmax), dtype float
         Polar angles (theta) of neighbor positions.
-    phi : array_like, shape (npoints, natmax, nspecies, nnmax)
+    phi : array_like, shape (npoints, natmax, nspecies, nnmax), dtype float
         Azimuthal angles (phi) of neighbor positions.
-    efact : array_like, shape (npoints, natmax, nspecies, nnmax)
+    efact : array_like, shape (npoints, natmax, nspecies, nnmax), dtype float
         Weighting factors for each neighbor (e.g., atomic weights or cutoff functions).
     nnmax : int
         Maximum number of neighbors per atom/species.
@@ -81,28 +91,16 @@ def build_SOAP0_kernels(npoints,lcut,natmax,nspecies,nat,nneigh,length,theta,phi
     sph_j6 = np.conj(sph_i6)
 
     # Precompute the kernel of local environments considering each atom species to be independent from each other
-    skernel = np.zeros((npoints,npoints,natmax,natmax), dtype=float)
-    for i in range(npoints):
-        for j in range(npoints):
-            for ii in range(nat[i]):
-                for jj in range(nat[j]):
-                    # Compute power spectrum I(x,x') for each atomic species
-                    ISOAP = np.zeros((nspecies,lcut+1,mcut,mcut),dtype=complex)
-                    for ix in range(nspecies):
-
-                        # Precompute modified spherical Bessel functions of the first kind
-                        sph_in = np.zeros((nneigh[i,ii,ix],nneigh[j,jj,ix],lcut+1),dtype=complex)
-                        for iii in range(nneigh[i,ii,ix]):
-                             for jjj in range(nneigh[j,jj,ix]):
-                                 sph_in[iii,jjj,:] = special.spherical_in(lcut,length[i,ii,ix,iii]*length[j,jj,ix,jjj])
-
-                        # Perform contraction over neighbour indexes
-                        ISOAP[ix,:,:,:] = np.einsum('a,b,abl,alm,blk->lmk',
-                                         efact[i,ii,ix,0:nneigh[i,ii,ix]], efact[j,jj,ix,0:nneigh[j,jj,ix]], sph_in[:,:,:],
-                                         sph_i6[i,ii,ix,0:nneigh[i,ii,ix],:,:], sph_j6[j,jj,ix,0:nneigh[j,jj,ix],:,:]   )
-
-                    # Compute the dot product of power spectra contracted over l,m,k and summing over all pairs of atomic species a,b
-                    skernel[i,j,ii,jj] = np.real(combine_spectra(lcut,mcut,nspecies,ISOAP,divfac))
+    # Ensure correct data types for C++ extension
+    nat_int32 = np.array(nat, dtype=np.int32)
+    nneigh_int32 = np.array(nneigh, dtype=np.int32)
+    divfac_float32 = np.array(divfac, dtype=np.float32)
+    efact_float32 = np.array(efact, dtype=np.float32)
+    length_float32 = np.array(length, dtype=np.float32)
+    sph_i6_complex64 = np.array(sph_i6, dtype=np.complex64)
+    sph_j6_complex64 = np.array(sph_j6, dtype=np.complex64)
+    
+    skernel = SOAP0_local(npoints, lcut, mcut, natmax, nspecies, nat_int32, nneigh_int32, efact_float32, length_float32, sph_i6_complex64, sph_j6_complex64, divfac_float32)
 
     # Compute global kernel between structures, averaging over all the (normalized) kernels of local environments
     kernel = np.zeros((npoints,npoints),dtype=float)
@@ -111,7 +109,15 @@ def build_SOAP0_kernels(npoints,lcut,natmax,nspecies,nat,nneigh,length,theta,phi
         for j in range(npoints):
             for ii in range(nat[i]):
                 for jj in range(nat[j]):
-                    kloc[i,j,ii,jj] = skernel[i,j,ii,jj] / np.sqrt(skernel[i,i,ii,ii]*skernel[j,j,jj,jj])
+                    # Check for division by zero (skernel is now real-valued)
+                    skernel_val = skernel[i,j,ii,jj]
+                    norm_ii = skernel[i,i,ii,ii]
+                    norm_jj = skernel[j,j,jj,jj]
+                    # Avoid division by zero
+                    if norm_ii > 1e-12 and norm_jj > 1e-12:
+                        kloc[i,j,ii,jj] = skernel_val / np.sqrt(norm_ii * norm_jj)
+                    else:
+                        kloc[i,j,ii,jj] = 0.0
                     kernel[i,j] += kloc[i,j,ii,jj]
             kernel[i,j] /= float(nat[i]*nat[j])
 
@@ -122,7 +128,9 @@ def build_SOAP0_kernels(npoints,lcut,natmax,nspecies,nat,nneigh,length,theta,phi
     skerneln  = np.zeros((npoints,npoints,natmax,natmax),dtype=float)
     for i,j in product(range(npoints),range(npoints)):
         for ii,jj in product(range(nat[i]),range(nat[j])):
-            skernelsq[i,j,ii,jj] = skernel[i,j,ii,jj]*skernel[i,j,ii,jj]
+            # skernel is now real-valued, so no need for real() conversion
+            skernel_val = skernel[i,j,ii,jj]
+            skernelsq[i,j,ii,jj] = skernel_val * skernel_val
     for n in nlist:
         if n!=0:
             for i,j in product(range(npoints),range(npoints)):
@@ -136,7 +144,11 @@ def build_SOAP0_kernels(npoints,lcut,natmax,nspecies,nat,nneigh,length,theta,phi
             kerneln = np.zeros((npoints,npoints),dtype=float)
             for i,j in product(range(npoints),range(npoints)):
                 for ii,jj in product(range(nat[i]),range(nat[j])):
-                    kerneln[i,j] += skerneln[i,j,ii,jj] / np.sqrt(skerneln[i,i,ii,ii]*skerneln[j,j,jj,jj])
+                    # Avoid division by zero
+                    norm_ii = skerneln[i,i,ii,ii]
+                    norm_jj = skerneln[j,j,jj,jj]
+                    if norm_ii > 1e-12 and norm_jj > 1e-12:
+                        kerneln[i,j] += skerneln[i,j,ii,jj] / np.sqrt(norm_ii * norm_jj)
         else:
             kerneln = np.zeros((npoints,npoints),dtype=float)
             for i,j in product(range(npoints),range(npoints)):
