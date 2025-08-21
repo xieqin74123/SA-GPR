@@ -340,12 +340,110 @@ extern "C" {
         }
         Py_DECREF(np_divfac);
         
-        // For simplicity, create dummy tensors (in real implementation, convert from numpy arrays)
+        // Convert nneigh (3D array of int: npoints x natmax x nspecies)
         Tensor3D<int> nneigh(npoints, vector<vector<int>>(natmax, vector<int>(nspecies, 0)));
-        Tensor4D<float> efact(npoints, Tensor3D<float>(natmax, vector<vector<float>>(nspecies, vector<float>(10, 1.0f))));
-        Tensor4D<float> length(npoints, Tensor3D<float>(natmax, vector<vector<float>>(nspecies, vector<float>(10, 1.0f))));
-        Tensor6D<complex<float>> sph_i6(npoints, Tensor5D<complex<float>>(natmax, Tensor4D<complex<float>>(nspecies, Tensor3D<complex<float>>(10, vector<vector<complex<float>>>(lcut+1, vector<complex<float>>(mcut, complex<float>(1.0f, 0.0f)))))));
-        Tensor6D<complex<float>> sph_j6(npoints, Tensor5D<complex<float>>(natmax, Tensor4D<complex<float>>(nspecies, Tensor3D<complex<float>>(10, vector<vector<complex<float>>>(lcut+1, vector<complex<float>>(mcut, complex<float>(1.0f, 0.0f)))))));
+        PyArrayObject* np_nneigh = (PyArrayObject*)PyArray_FROM_OTF(py_nneigh, NPY_INT, NPY_ARRAY_IN_ARRAY);
+        if (np_nneigh == NULL) return NULL;
+        for (int i = 0; i < npoints; ++i) {
+            for (int j = 0; j < natmax; ++j) {
+                for (int k = 0; k < nspecies; ++k) {
+                    nneigh[i][j][k] = *(int*)PyArray_GETPTR3(np_nneigh, i, j, k);
+                }
+            }
+        }
+        Py_DECREF(np_nneigh);
+        
+        // Find maximum number of neighbors for array allocation
+        int nnmax = 0;
+        for (int i = 0; i < npoints; ++i) {
+            for (int j = 0; j < natmax; ++j) {
+                for (int k = 0; k < nspecies; ++k) {
+                    if (nneigh[i][j][k] > nnmax) {
+                        nnmax = nneigh[i][j][k];
+                    }
+                }
+            }
+        }
+        
+        // Convert efact (4D array of float: npoints x natmax x nspecies x nnmax)
+        Tensor4D<float> efact(npoints, Tensor3D<float>(natmax, vector<vector<float>>(nspecies, vector<float>(nnmax, 0.0f))));
+        PyArrayObject* np_efact = (PyArrayObject*)PyArray_FROM_OTF(py_efact, NPY_FLOAT, NPY_ARRAY_IN_ARRAY);
+        if (np_efact == NULL) return NULL;
+        for (int i = 0; i < npoints; ++i) {
+            for (int j = 0; j < natmax; ++j) {
+                for (int k = 0; k < nspecies; ++k) {
+                    for (int l = 0; l < nnmax; ++l) {
+                        efact[i][j][k][l] = *(float*)PyArray_GETPTR4(np_efact, i, j, k, l);
+                    }
+                }
+            }
+        }
+        Py_DECREF(np_efact);
+        
+        // Convert length (4D array of float: npoints x natmax x nspecies x nnmax)
+        Tensor4D<float> length(npoints, Tensor3D<float>(natmax, vector<vector<float>>(nspecies, vector<float>(nnmax, 0.0f))));
+        PyArrayObject* np_length = (PyArrayObject*)PyArray_FROM_OTF(py_length, NPY_FLOAT, NPY_ARRAY_IN_ARRAY);
+        if (np_length == NULL) return NULL;
+        for (int i = 0; i < npoints; ++i) {
+            for (int j = 0; j < natmax; ++j) {
+                for (int k = 0; k < nspecies; ++k) {
+                    for (int l = 0; l < nnmax; ++l) {
+                        length[i][j][k][l] = *(float*)PyArray_GETPTR4(np_length, i, j, k, l);
+                    }
+                }
+            }
+        }
+        Py_DECREF(np_length);
+        
+        // Convert sph_i6 (6D array of complex: npoints x natmax x nspecies x nnmax x (lcut+1) x mcut)
+        Tensor6D<complex<float>> sph_i6(npoints, Tensor5D<complex<float>>(natmax, Tensor4D<complex<float>>(nspecies, Tensor3D<complex<float>>(nnmax, vector<vector<complex<float>>>(lcut+1, vector<complex<float>>(mcut, complex<float>(0.0f, 0.0f)))))));
+        PyArrayObject* np_sph_i6 = (PyArrayObject*)PyArray_FROM_OTF(py_sph_i6, NPY_COMPLEX64, NPY_ARRAY_IN_ARRAY);
+        if (np_sph_i6 == NULL) return NULL;
+        npy_intp* sph_i6_strides = PyArray_STRIDES(np_sph_i6);
+        char* sph_i6_data = (char*)PyArray_DATA(np_sph_i6);
+        for (int i = 0; i < npoints; ++i) {
+            for (int j = 0; j < natmax; ++j) {
+                for (int k = 0; k < nspecies; ++k) {
+                    for (int l = 0; l < nnmax; ++l) {
+                        for (int m = 0; m <= lcut; ++m) {
+                            for (int n = 0; n < mcut; ++n) {
+                                complex<float>* ptr = (complex<float>*)(sph_i6_data + 
+                                    i * sph_i6_strides[0] + j * sph_i6_strides[1] + 
+                                    k * sph_i6_strides[2] + l * sph_i6_strides[3] + 
+                                    m * sph_i6_strides[4] + n * sph_i6_strides[5]);
+                                sph_i6[i][j][k][l][m][n] = *ptr;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Py_DECREF(np_sph_i6);
+        
+        // Convert sph_j6 (6D array of complex: npoints x natmax x nspecies x nnmax x (lcut+1) x mcut)
+        Tensor6D<complex<float>> sph_j6(npoints, Tensor5D<complex<float>>(natmax, Tensor4D<complex<float>>(nspecies, Tensor3D<complex<float>>(nnmax, vector<vector<complex<float>>>(lcut+1, vector<complex<float>>(mcut, complex<float>(0.0f, 0.0f)))))));
+        PyArrayObject* np_sph_j6 = (PyArrayObject*)PyArray_FROM_OTF(py_sph_j6, NPY_COMPLEX64, NPY_ARRAY_IN_ARRAY);
+        if (np_sph_j6 == NULL) return NULL;
+        npy_intp* sph_j6_strides = PyArray_STRIDES(np_sph_j6);
+        char* sph_j6_data = (char*)PyArray_DATA(np_sph_j6);
+        for (int i = 0; i < npoints; ++i) {
+            for (int j = 0; j < natmax; ++j) {
+                for (int k = 0; k < nspecies; ++k) {
+                    for (int l = 0; l < nnmax; ++l) {
+                        for (int m = 0; m <= lcut; ++m) {
+                            for (int n = 0; n < mcut; ++n) {
+                                complex<float>* ptr = (complex<float>*)(sph_j6_data + 
+                                    i * sph_j6_strides[0] + j * sph_j6_strides[1] + 
+                                    k * sph_j6_strides[2] + l * sph_j6_strides[3] + 
+                                    m * sph_j6_strides[4] + n * sph_j6_strides[5]);
+                                sph_j6[i][j][k][l][m][n] = *ptr;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Py_DECREF(np_sph_j6);
         
         // Call the C++ function
         Tensor4D<float> skernel = SOAP0_local(npoints, lcut, mcut, natmax, nspecies, 
